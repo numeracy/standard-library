@@ -18,7 +18,7 @@ common_names = {
 	"Hartsville/Trousdale County": "Hartsville",
 }
 
-suffix_regex = re.compile(" (city|town|village|municipality|corporation|UT|CDP|comunidad|zona urbana)")
+suffix_regex = re.compile(" (city|town|village|municipality|corporation|UT|CDP|comunidad|zona urbana|vill)")
 
 def canonical_name(name):
 	remove_suffix = True
@@ -100,6 +100,11 @@ def city_data_90s():
 	}
 
 	lines = open("source-data/SU-99-7_US.txt").readlines()
+
+	for i in range(len(lines)):
+		line = lines[i]
+		if line.find("vill,MD"):
+			lines[i] = line.replace("vill,MD", "vill, MD")
 
 	for info in [early_90s_info, late_90s_info]:
 		table_values = info["table"].table_values_for_lines(lines)[1]
