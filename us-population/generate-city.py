@@ -47,26 +47,6 @@ def canonical_name(name):
 			name = name[0:m.start()]
 	return name
 
-
-def generate_2015_data(outname):
-	in_file = open("source-data/SUB-EST2015_ALL.csv")
-	out_file = open("data/" + outname, "w+")
-
-	reader = csv.DictReader(in_file)
-	writer = csv.writer(out_file)
-
-	writer.writerow(["City", "State", "Population"])
-
-	for d in reader:
-		if d["SUMLEV"] != "162" and d["SUMLEV"] != "170":
-			continue # This is not a total place population
-
-		name = canonical_name(d["NAME"])
-		if not name:
-			continue
-
-		writer.writerow([name, d["STNAME"], d["POPESTIMATE2015"]])
-
 def generate_2010_data(outname):
 	in_file = open("source-data/sf1-place-pop.csv")
 	out_file = open("data/" + outname, "w+")
@@ -170,5 +150,4 @@ def generate_historical(outname):
 
 if __name__ == "__main__":
 	generate_2010_data("city-census.csv")
-	generate_2015_data("city-latest.csv")
 	generate_historical("cities.csv")
