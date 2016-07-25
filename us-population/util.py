@@ -6,9 +6,11 @@ number_regex = re.compile('\d+')
 short_date_regex = re.compile('(\d+/)?\d+/(\d+)')
 
 state_name_for_abbrev = {}
+postal_code_for_fips = {}
 abbrev_reader = csv.DictReader(open("source-data/state-abbreviations.csv"))
 for state in abbrev_reader:
-	state_name_for_abbrev[state["USPS"]] = state["Name"]
+	state_name_for_abbrev[state["Postal Code"]] = state["Name"]
+	postal_code_for_fips[state["FIPS"]] = state["Postal Code"]
 
 def normalize_value(value):
 	if value and value[0] == ".":
