@@ -1,10 +1,13 @@
 import census
 import csv
+import us
 
 c = census.Census("d0aed3790c96f4f43bc7e37bbddae0e55c56ee01")
 
 aggregation_fields = {
 	"zip": "zip code tabulation area",
+	"county_fips": "county",
+	"state_fips": "state",
 }
 
 fields = {
@@ -115,16 +118,19 @@ def fetch_values(fetcher, values):
 				result.update(subres[i])
 	return results
 
-def process_results(results, primary_key):
-	processed = [
-		[primary_key, "population",
-		 "high_school", "bachelors", "graduate",
-		 "white", "black", "native", "asian", "hispanic", "other",
-		 "0_to_17", "18_to_24", "25_to_49", "45_to_64", "65_plus",
-		 "per_capita_income", "median_household_income",
-		 "$0_to_50k", "$50_to_100k", "$100_to_200", "$200_plus"]
-	]
-	census_primary_key = aggregation_fields[primary_key]
+def process_results(results, primary_keys):
+	header_row = []
+	header_row.extend(primary_keys)
+	header_row.extend([
+		"population",
+		"high_school", "bachelors", "graduate",
+		"white", "black", "native", "asian", "hispanic", "other",
+		"0_to_17", "18_to_24", "25_to_49", "45_to_64", "65_plus",
+		"per_capita_income", "median_household_income",
+		"$0_to_50", "$50_to_100", "$100_to_200", "$200_plus"
+	])
+
+	processed = [header_row]
 
 	for result in results:
 		def getter(field):
@@ -185,8 +191,11 @@ def process_results(results, primary_key):
 				total += get_float(field)
 			return str(total / household_income_total)
 
-		processed.append([
-			result[census_primary_key],
+		row = []
+		for primary_key in primary_keys:
+			row.append(result[aggregation_fields[primary_key]])
+
+		row.extend([
 			get_float("population"),
 
 			# education
@@ -220,11 +229,12 @@ def process_results(results, primary_key):
 			get_household_percent(["household_100_to_125", "household_125_to_150", "household_150_to_200"]),
 			get_household_percent(["household_200_plus"]),
 		])
+		processed.append(row)
 	return processed
 
-def fetch_zcta(zcta, outfile):
-	unprocessed = fetch_values(lambda values: c.acs5.zipcode(values, zcta), fields.values())
-	rows = process_results(unprocessed, "zip")
+def fetch_and_write_data(primary_keys, fetcher, outfile):
+	unprocessed = fetch_values(fetcher, fields.values())
+	rows = process_results(unprocessed, primary_keys)
 	if outfile:
 		f = open("data/" + outfile, "w+")
 		writer = csv.writer(f)
@@ -233,6 +243,26 @@ def fetch_zcta(zcta, outfile):
 	else:
 		print rows
 
+
+def fetch_zcta(zcta, outfile):
+	def fetcher(fields):
+		return c.acs5.zipcode(fields, zcta)
+	fetch_and_write_data(["zip"], fetcher, outfile)
+
+def fetch_county(state_fips, county_fips, outfile):
+	def fetcher(fields):
+		return c.acs5.state_county(fields, state_fips, county_fips)
+	fetch_and_write_data(["state_fips", "county_fips"], fetcher, outfile)
+
+def fetch_state(state_fips, outfile):
+	def fetcher(fields):
+		return c.acs5.state(fields, state_fips)
+	fetch_and_write_data(["state_fips"], fetcher, outfile)
+
 if __name__ == "__main__":
 	fetch_zcta("*", "zips-latest.csv")
+	fetch_county("*", "*", "counties-latest.csv")
+	fetch_state("*", "states-latest.csv")
 	#fetch_zcta("94110", None)
+	#fetch_county(us.states.CA.fips, "075", None)
+	#fetch_state(us.states.CA.fips, None)
