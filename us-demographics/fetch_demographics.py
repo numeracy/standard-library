@@ -118,6 +118,15 @@ def fetch_values(fetcher, values):
 				result.update(subres[i])
 	return results
 
+def write_rows(rows, outfile):
+	if outfile:
+		f = open("data/" + outfile, "w+")
+		writer = csv.writer(f)
+		writer.writerows(rows)
+		f.close()
+	else:
+		print rows
+
 def process_results(results, primary_keys):
 	header_row = []
 	header_row.extend(primary_keys)
@@ -235,14 +244,7 @@ def process_results(results, primary_keys):
 def fetch_and_write_data(primary_keys, fetcher, outfile):
 	unprocessed = fetch_values(fetcher, fields.values())
 	rows = process_results(unprocessed, primary_keys)
-	if outfile:
-		f = open("data/" + outfile, "w+")
-		writer = csv.writer(f)
-		writer.writerows(rows)
-		f.close()
-	else:
-		print rows
-
+	write_rows(rows, outfile)
 
 def fetch_zcta(zcta, outfile):
 	def fetcher(fields):
@@ -259,10 +261,31 @@ def fetch_state(state_fips, outfile):
 		return c.acs5.state(fields, state_fips)
 	fetch_and_write_data(["state_fips"], fetcher, outfile)
 
-if __name__ == "__main__":
+# Gets only median income because fields change between years and it's not worth
+# calculating all the fields for every year
+def fetch_income_by_zcta(zcta, outfile, year=2011):
+	def fetcher(fields):
+		return c.acs5.zipcode(fields, zcta, year=year)
+
+	income_fields = {
+		"median_household_income": "B19013_001E"
+	}
+
+	unprocessed = fetch_values(fetcher, income_fields.values())
+
+	rows = [["Zip", "Median household income"]]
+	for result in unprocessed:
+		rows.append([result["zip code tabulation area"], result["B19013_001E"] or "0"])
+	write_rows(rows, outfile)
+
+def fetch_all():
 	fetch_zcta("*", "zips-latest.csv")
 	fetch_county("*", "*", "counties-latest.csv")
 	fetch_state("*", "states-latest.csv")
+
+if __name__ == "__main__":
+	fetch_all()
 	#fetch_zcta("94110", None)
 	#fetch_county(us.states.CA.fips, "075", None)
 	#fetch_state(us.states.CA.fips, None)
+	#fetch_income_by_zcta("94110", None, year=2011)
