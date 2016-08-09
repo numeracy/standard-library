@@ -20,6 +20,9 @@ common_names = {
 
 suffix_regex = re.compile(" (city|town|village|municipality|corporation|UT|CDP|comunidad|zona urbana|vill)")
 
+def utf8(latin1_str):
+	return latin1_str.decode("latin-1").encode("utf-8")
+
 def canonical_name(name):
 	remove_suffix = True
 
@@ -107,7 +110,7 @@ def city_data_90s():
 				continue
 
 			for (year, idx) in info["year_indices"]:
-				historical_values.append([name, state, year, values[idx]])
+				historical_values.append([utf8(name), state, year, values[idx]])
 
 	return historical_values
 
@@ -138,7 +141,7 @@ def generate_historical(outname):
 
 			for year in range(*info["year_range"]):
 				population = d["POPESTIMATE" + str(year)]
-				historical_values.append([name, state, str(year), population])
+				historical_values.append([utf8(name), state, str(year), population])
 
 
 	historical_values.sort(key=operator.itemgetter(1, 0, 2))
