@@ -261,15 +261,19 @@ def fetch_state(state_fips, outfile):
 		return c.acs5.state(fields, state_fips)
 	fetch_and_write_data(["state_fips"], fetcher, outfile)
 
+income_fields = {
+	"median_household_income": "B19013_001E"
+}
+
+census_income_fields = {
+	"median_household_income": "P053001"
+}
+
 # Gets only median income because fields change between years and it's not worth
 # calculating all the fields for every year
 def fetch_income_by_zcta(zcta, outfile, year=2011):
 	def fetcher(fields):
 		return c.acs5.zipcode(fields, zcta, year=year)
-
-	income_fields = {
-		"median_household_income": "B19013_001E"
-	}
 
 	unprocessed = fetch_values(fetcher, income_fields.values())
 
@@ -277,6 +281,107 @@ def fetch_income_by_zcta(zcta, outfile, year=2011):
 	for result in unprocessed:
 		rows.append([result["zip code tabulation area"], result["B19013_001E"] or "0"])
 	write_rows(rows, outfile)
+
+def fetch_income_by_county(state, county, outfile, year=2014):
+	def fetcher(fields):
+		return c.acs5.state_county(fields, state, county, year=year)
+
+	unprocessed = fetch_values(fetcher, income_fields.values())
+
+	rows = [["FIPS", "Median household income"]]
+	for result in unprocessed:
+		rows.append([result["state"] + result["county"], result["B19013_001E"] or "0"])
+	write_rows(rows, outfile)
+
+def state_wildcard_multirequest(fetcher):
+	results = []
+
+	for state in us.states.STATES:
+		if state.fips:
+			results.extend(fetcher(state.fips))
+		else:
+			print "no fips: " + str(state)
+
+	return results
+
+def fetch_income_by_tract(state, county, tract, outfile, year=2014):
+	if state == "*":
+		def fetcher(fields):
+			def single_state_fetcher(state):
+				return c.acs5.state_county_tract(fields, state, county, tract, year=year)
+			return state_wildcard_multirequest(single_state_fetcher)
+	else:
+		def fetcher(fields):
+			return c.acs5.state_county_tract(fields, state, county, tract, year=year)
+
+	unprocessed = fetch_values(fetcher, income_fields.values())
+
+	rows = [["FIPS", "tract", "Median household income"]]
+	for result in unprocessed:
+		rows.append([result["state"] + result["county"], result["tract"], result["B19013_001E"] or "0"])
+	write_rows(rows, outfile)
+
+def fetch_income_by_tract_census(state, county, tract, outfile, year=2000):
+	if state == "*":
+		def fetcher(fields):
+			def single_state_fetcher(state):
+				return c.sf3.state_county_tract(fields, state, county, tract, year=year)
+			return state_wildcard_multirequest(single_state_fetcher)
+	else:
+		def fetcher(fields):
+			return c.sf3.state_county_tract(fields, state, county, tract, year=year)
+
+	unprocessed = fetch_values(fetcher, census_income_fields.values())
+
+	rows = [["FIPS", "tract", "Median household income"]]
+	for result in unprocessed:
+		rows.append([result["state"] + result["county"], result["tract"], result["P053001"] or "0"])
+	write_rows(rows, outfile)
+
+def fetch_income_by_county_census(state, county, outfile, year=2000):
+	def fetcher(fields):
+		return c.sf3.state_county(fields, state, county, year=year)
+
+	unprocessed = fetch_values(fetcher, census_income_fields.values())
+
+	rows = [["FIPS", "Median household income"]]
+	for result in unprocessed:
+		rows.append([result["state"] + result["county"], result["P053001"] or "0"])
+	write_rows(rows, outfile)
+
+def fetch_rental_pop(outfile):
+	def fetcher(fields):
+		return c.acs5.state_county_tract(fields, us.states.CA.fips, "075", "*")
+
+	rental_fields = {
+		"total_pop": "B01003_001E",
+		"tenure_total": "B25003_001E",
+		"tenure_renter": "B25003_003E"
+	}
+
+	unprocessed = fetch_values(fetcher, rental_fields.values())
+
+	rows = [["Tract", "Population", "Households", "Rental Households"]]
+	for result in unprocessed:
+		rows.append([result["tract"], result["B01003_001E"] or "0", result["B25003_001E"] or "0", result["B25003_003E"] or "0"])
+	write_rows(rows, outfile)
+
+def fetch_median_age(zcta, outfile):
+	def fetcher(fields):
+		return c.acs5.zipcode(fields, zcta)
+
+	median_age_fields = {
+		"median_age": "B01002_001E",
+		"population": "B01003_001E",
+	}
+
+	unprocessed = fetch_values(fetcher, median_age_fields.values())
+
+	rows = [["ZIP", "Population", "Median age"]]
+	for result in unprocessed:
+		rows.append([result["zip code tabulation area"], result["B01003_001E"] or "0", result["B01002_001E"] or ""])
+	write_rows(rows, outfile)
+
 
 def fetch_all():
 	fetch_zcta("*", "zips-latest.csv")
@@ -288,4 +393,9 @@ if __name__ == "__main__":
 	#fetch_zcta("94110", None)
 	#fetch_county(us.states.CA.fips, "075", None)
 	#fetch_state(us.states.CA.fips, None)
-	#fetch_income_by_zcta("94110", None, year=2011)
+	#fetch_income_by_zcta("94110", None, year=2009)
+	#fetch_income_by_county("*", "*", "county-incomes-2014.csv", year=2014)
+	#fetch_income_by_county_census("*", "*", "county-incomes-2000.csv", year=2000)
+	#fetch_income_by_tract_census("*", "*", "*", "tract-incomes-2000.csv", year=2000)
+	#fetch_median_age("*", "median-age-by-zip.csv")
+	#fetch_rental_pop("sf-rentals-tracts.csv")
