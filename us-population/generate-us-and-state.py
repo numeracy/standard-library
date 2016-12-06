@@ -20,8 +20,8 @@ table_defs = {
 		SpaceTable("65-69", 79, 81, (87, 138), skip_col=6)
 	],
 	"st7080ts.txt": [
-		SpaceTable("70-75", 14, 66, (15, 66), skip_col=0, in_thousands=False),
-		SpaceTable("76-79", 67, 119, (68, 119), skip_col=0, in_thousands=False)
+		SpaceTable("70-75", 14, 66, (15, 66), ltrim=4, in_thousands=False),
+		SpaceTable("76-79", 67, 119, (68, 119), ltrim=4, skip_col=5, in_thousands=False)
 	],
 	"st8090ts.txt": [
 		SpaceTable("80-84", 10, 11, (12, 63), in_thousands=False),
@@ -31,7 +31,7 @@ table_defs = {
 		SpaceTable("90-93", 84, 88, (102, 153), ltrim=7, skip_col=5, in_thousands=False),
 		SpaceTable("94-99", 10, 14, (28, 79), ltrim=7, in_thousands=False)
 	],
-	"ST-EST00INT-01.csv": [CsvTable("2000-2009", 4, 5, (10, 61), 0, (3, 12))],
+	"ST-EST00INT-01.csv": [CsvTable("2000-2009", 4, 5, (10, 61), 0, (2, 12))],
 	"NST-EST2015-alldata.csv": [CsvTable("2010-2015", 1, 2, (7, 58), 4, (7, 13))]
 }
 
