@@ -53,12 +53,29 @@ def include_2000_to_2009(rows):
 				population = county_row[col_idx].replace(",", "")
 				rows.append([postal_code, fips, year, population])
 
+def include_1970_to_1999(rows):
+	for county in csv.DictReader(open("source-data/county_population.csv")):
+		if county["county_fips"] == "0" or (not county["pop1970"] and not county["pop1999"]):
+			continue
+
+		fips = "%05d" % int(county["fips"])
+		state = util.postal_code_for_fips[fips[0:2]]
+
+		for year in range(1970, 2000):
+			population = county["pop%s" % year]
+			if not population:
+				print "Data not found for county %s" % county["county_name"]
+				continue
+
+			rows.append([state, fips, str(year), population])
+
 
 def generate_counties():
 	rows = []
 
 	include_2010_to_2020(rows)
 	include_2000_to_2009(rows)
+	include_1970_to_1999(rows)
 
 	rows.sort(key=operator.itemgetter(1, 2))
 
